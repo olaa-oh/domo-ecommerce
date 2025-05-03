@@ -1,6 +1,7 @@
 import 'package:domo/common/styles/style.dart';
 import 'package:domo/common/widgets/service/vert_service_card.dart';
 import 'package:domo/features/services/controllers/service_controller.dart';
+import 'package:domo/features/services/views/service_details_page.dart';
 import 'package:domo/features/shop/controller/shop_details_controller.dart';
 import 'package:domo/features/shop/model/shop_model.dart';
 import 'package:flutter/material.dart';
@@ -14,31 +15,32 @@ class ShopDetailsPage extends StatelessWidget {
   const ShopDetailsPage({Key? key, required this.shopDetails})
       : super(key: key);
 
-@override
-Widget build(BuildContext context) {
-  final serviceController = Get.find<ServiceController>();
-  final controller = Get.find<ShopDetailsController>();
+  @override
+  Widget build(BuildContext context) {
+    final serviceController = Get.find<ServiceController>();
+    final controller = Get.find<ShopDetailsController>();
 
-  return Scaffold(
-    body: SafeArea(
-      child: FutureBuilder<ShopModel?>(
-        future: controller.fetchShopDetailsById(shopDetails.id),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return Scaffold(
+      body: SafeArea(
+        child: FutureBuilder<ShopModel?>(
+            future: controller.fetchShopDetailsById(shopDetails.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          if (!snapshot.hasData || snapshot.data == null) {
-            return const Center(child: Text('Shop details not found'));
-          }
+              if (!snapshot.hasData || snapshot.data == null) {
+                return const Center(child: Text('Shop details not found'));
+              }
 
-          final shopDetails = snapshot.data!;
+              final shopDetails = snapshot.data!;
 
-          // Set location after data is fetched
-        final geoPoints = controller.getShopGeoPoints(shopDetails);
+              // Set location after data is fetched
+              final geoPoints = controller.getShopGeoPoints(shopDetails);
               if (geoPoints != null) {
                 controller.selectedLocation.value = geoPoints;
-                controller.selectedLocationAddress.value = shopDetails.location.toString();
+                controller.selectedLocationAddress.value =
+                    shopDetails.location.toString();
 
                 // Add marker
                 controller.mapMarkers.clear();
@@ -49,38 +51,38 @@ Widget build(BuildContext context) {
                 ));
               }
 
-          // Trigger service fetch
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            serviceController.getServicesByShopId(shopDetails.id);
-          });
+              // Trigger service fetch
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                serviceController.getServicesByShopId(shopDetails.id);
+              });
 
-          return CustomScrollView(
-            slivers: [
-              _buildSliverAppBar(shopDetails),
-              SliverToBoxAdapter(
-                child: Obx(() => Padding(
-                  padding: AppTheme.screenPadding,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildLocationSection(context, controller),
-                      // Rest of the sections remain the same
-                      _buildDescriptionSection(shopDetails),
-                      _buildServiceModesSection(shopDetails),
-                      _buildOperatingHoursSection(context, shopDetails),
-                      _buildContactSection(shopDetails),
-                      _buildServicesSection(serviceController),
-                    ],
+              return CustomScrollView(
+                slivers: [
+                  _buildSliverAppBar(shopDetails),
+                  SliverToBoxAdapter(
+                    child: Obx(() => Padding(
+                          padding: AppTheme.screenPadding,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildLocationSection(context, controller),
+                              // Rest of the sections remain the same
+                              _buildDescriptionSection(shopDetails),
+                              _buildServiceModesSection(shopDetails),
+                              _buildOperatingHoursSection(context, shopDetails),
+                              _buildContactSection(shopDetails),
+                              _buildServicesSection(serviceController),
+                            ],
+                          ),
+                        )),
                   ),
-                )),
-              ),
-            ],
-          );
-        }
+                ],
+              );
+            }),
       ),
-    ),
-  );
-}
+    );
+  }
+
   // Sliver App Bar with Image and Shop Name
   SliverAppBar _buildSliverAppBar(ShopModel shopDetails) {
     return SliverAppBar(
@@ -139,7 +141,8 @@ Widget build(BuildContext context) {
         ),
         const SizedBox(height: 10),
         FutureBuilder<String>(
-          future: controller.getReadableAddress(shopDetails.location.latitude, shopDetails.location.longitude),
+          future: controller.getReadableAddress(
+              shopDetails.location.latitude, shopDetails.location.longitude),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -330,7 +333,10 @@ Widget build(BuildContext context) {
                   return ServiceCard(
                     service: service,
                     onPressed: () {
-                      Get.toNamed('/service-details', arguments: service);
+                      Get.to(
+                        () => ServiceDetailsPage(service: service),
+                        arguments: service,
+                      );
                     },
                   );
                 }).toList(),

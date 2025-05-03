@@ -1,4 +1,4 @@
-// booking_model.dart
+// booking_model.dart 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BookingModel {
@@ -7,16 +7,20 @@ class BookingModel {
   String customerId;
   String shopId;
   DateTime bookingDate;
-  String status; // Updated to include new statuses
+  String status; 
   String notes;
   double price;
-  final String? serviceName;
+  final String serviceName;
   
   // New fields for completion
   int? rating;
   String? review;
   DateTime? completionInitiatedAt;
   String? completionInitiatedBy;
+  
+  // New fields for review integration
+  String? reviewId;
+  bool isReviewed;
 
   BookingModel({
     required this.id,
@@ -27,11 +31,13 @@ class BookingModel {
     required this.status,
     required this.notes,
     required this.price,
-    this.serviceName,
+    required this.serviceName,
     this.rating,
     this.review,
     this.completionInitiatedAt,
     this.completionInitiatedBy,
+    this.reviewId,
+    this.isReviewed = false,
   });
 
   static BookingModel empty() => BookingModel(
@@ -43,6 +49,7 @@ class BookingModel {
         status: "pending",
         notes: "",
         price: 0.0,
+        serviceName: "",
       );
 
   Map<String, dynamic> toJson() {
@@ -57,8 +64,11 @@ class BookingModel {
       'price': price,
       'rating': rating,
       'review': review,
+      'serviceName': serviceName,
       'completionInitiatedAt': completionInitiatedAt?.toIso8601String(),
       'completionInitiatedBy': completionInitiatedBy,
+      'reviewId': reviewId,
+      'isReviewed': isReviewed,
     };
   }
 
@@ -75,10 +85,18 @@ class BookingModel {
       price: (data['price'] ?? 0.0).toDouble(),
       rating: data['rating'],
       review: data['review'],
+      serviceName: data['serviceName'] ?? "",
       completionInitiatedAt: data['completionInitiatedAt'] != null 
         ? DateTime.parse(data['completionInitiatedAt']) 
         : null,
       completionInitiatedBy: data['completionInitiatedBy'],
+      reviewId: data['reviewId'],
+      isReviewed: data['isReviewed'] ?? false,
     );
+  }
+
+  // New helper method to check if booking is eligible for review
+  bool get isEligibleForReview {
+    return status == 'completed' && !isReviewed;
   }
 }

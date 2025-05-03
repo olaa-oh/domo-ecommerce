@@ -14,7 +14,7 @@ class ServiceController extends GetxController {
   RxList<ServicesModel> services = <ServicesModel>[].obs;
   final RxList<ThemesModel> themes = <ThemesModel>[].obs;
   final isLoading = false.obs;
-
+  final Map<String, String> _serviceNameCache = {};
   @override
   void onInit() {
     super.onInit();
@@ -111,7 +111,7 @@ class ServiceController extends GetxController {
     }
   }
 
-// services functions for
+
   // Method to convert GeoPoint to human-readable address
   Future<String> convertGeoPointToAddress(GeoPoint geoPoint) async {
     try {
@@ -373,5 +373,33 @@ class ServiceController extends GetxController {
       return [];
     }
   }
+
+  Future<String> getServiceNameSync(String serviceId) async {
+  // First check if we already have the service name in cache
+  if (_serviceNameCache.containsKey(serviceId)) {
+    return _serviceNameCache[serviceId]!;
+  }
+  
+  try {
+    // If not in cache, fetch it asynchronously
+    final serviceDoc = await FirebaseFirestore.instance
+        .collection('services')
+        .doc(serviceId)
+        .get()
+        .timeout(const Duration(seconds: 5));
+    
+    if (serviceDoc.exists) {
+      final service = ServicesModel.fromSnapshot(serviceDoc);
+      _serviceNameCache[serviceId] = service.serviceName;
+      return service.serviceName;
+    } else {
+      _serviceNameCache[serviceId] = 'Service not found';
+      return _serviceNameCache[serviceId]!;
+    }
+  } catch (e) {
+    _serviceNameCache[serviceId] = 'Error: $e';
+    return _serviceNameCache[serviceId]!;
+  }
+}
 
 }

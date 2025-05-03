@@ -65,7 +65,8 @@ class ShopDetailsController extends GetxController {
   void onInit() {
     super.onInit();
     _initializeControllers();
-    _fetchShopDetails();
+    // _fetchShopDetails();
+    _fetchShopDetailsForCurrentUser();
     fetchShops();
     fetchShopDetailsById(shopDetails.value.id);
 
@@ -79,35 +80,33 @@ class ShopDetailsController extends GetxController {
   }
 
 
-  Future<void> _fetchShopDetails() async {
-    try {
-      final currentUser = _authRepository.currentUser;
-      if (currentUser != null) {
-        final shop = await _shopRepository.fetchShopDetails(shopDetails.value.id);
-        if (shop != null) {
-          // Ensure the shop has an ID
-          if (shop.id.isEmpty) {
-            // If ID is empty, try to fetch the shop document and get its ID
-            final shopDoc = await FirebaseFirestore.instance
-                .collection('shops')
-                .where('id', isEqualTo: shopDetails.value.id)
-                .limit(1)
-                .get();
+  // Future<void> _fetchShopDetails() async {
+  //   try {
+  //     final currentUser = _authRepository.currentUser;
+  //     if (currentUser != null) {
+  //       final shop = await _shopRepository.fetchShopDetails(shopDetails.value.id);
+  //       if (shop != null) {
+  //         if (shop.id.isEmpty) {
+  //           final shopDoc = await FirebaseFirestore.instance
+  //               .collection('shops')
+  //               .where('id', isEqualTo: shopDetails.value.id)
+  //               .limit(1)
+  //               .get();
 
-            if (shopDoc.docs.isNotEmpty) {
-              shop.id = shopDoc.docs.first.id;
-            }
-          }
+  //           if (shopDoc.docs.isNotEmpty) {
+  //             shop.id = shopDoc.docs.first.id;
+  //           }
+  //         }
 
-          shopDetails.value = shop;
-          _updateControllersWithShopData();
-          _updateLocationDetails();
-        }
-      }
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to fetch shop details');
-    }
-  }
+  //         shopDetails.value = shop;
+  //         _updateControllersWithShopData();
+  //         _updateLocationDetails();
+  //       }
+  //     }
+  //   } catch (e) {
+  //     Get.snackbar('Error', 'Failed to fetch shop details');
+  //   }
+  // }
 
   void _updateControllersWithShopData() {
     nameController.text = shopDetails.value.name;
@@ -551,6 +550,27 @@ Future<ShopModel?> fetchShopDetailsById(String shopId) async {
    print('Shop details fetch error: $e');
    return null;
  }
+}
+
+Future<void> _fetchShopDetailsForCurrentUser() async {
+  try {
+    final currentUser = _authRepository.currentUser;
+    if (currentUser != null) {
+      // Fetch shop by artisan ID instead of relying on an existing shop ID
+      final shop = await _shopRepository.fetchShopByArtisanId(currentUser.uid);
+      
+      if (shop != null) {
+        shopDetails.value = shop;
+        _updateControllersWithShopData();
+        _updateLocationDetails();
+      } else {
+        print('No shop found for current artisan');
+      }
+    }
+  } catch (e) {
+    print('Error fetching shop details: $e');
+    Get.snackbar('Error', 'Failed to fetch shop details');
+  }
 }
 
 // fetch shops

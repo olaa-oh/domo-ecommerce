@@ -28,7 +28,7 @@ class ServiceCard extends StatelessWidget {
       decoration: AppTheme.outlinedBox(
         borderRadius: AppTheme.cardRadius,
         boxShadow: [
-          BoxShadow(
+          const BoxShadow(
             color: Colors.black12,
             blurRadius: 6,
             offset: Offset(0, 2),
@@ -45,7 +45,7 @@ class ServiceCard extends StatelessWidget {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
                   child: Image.network(
                     service.imageAsset,
                     width: double.infinity,
@@ -56,7 +56,7 @@ class ServiceCard extends StatelessWidget {
                         width: double.infinity,
                         height: 100,
                         color: AppTheme.caption.withOpacity(0.2),
-                        child: Icon(
+                        child: const Icon(
                           Icons.image_not_supported,
                           color: AppTheme.icon,
                         ),
@@ -186,7 +186,7 @@ class ServiceCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.star, color: Colors.amber, size: 16),
+                          const Icon(Icons.star, color: Colors.amber, size: 16),
                           const SizedBox(width: 4),
                           Text(
                             service.rating.toString(),
@@ -202,7 +202,7 @@ class ServiceCard extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.button,
                           foregroundColor: AppTheme.buttonText,
-                          shape: RoundedRectangleBorder(
+                          shape: const RoundedRectangleBorder(
                             borderRadius: AppTheme.buttonRadius,
                           ),
                           padding: const EdgeInsets.symmetric(
@@ -259,9 +259,10 @@ class ServiceCard extends StatelessWidget {
         // Book the service
         await bookingsController.bookService(
           serviceId: service.id,
-          shopId: '',
+          shopId: service.shopId,
           bookingDate: bookingDateTime,
           price: service.price,
+          serviceName: service.serviceName,
         );
       }
     }

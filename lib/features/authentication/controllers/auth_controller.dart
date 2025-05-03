@@ -1,186 +1,229 @@
 import 'package:domo/data/repos/auth_repository.dart';
-import 'package:domo/features/onboarding/views/get_started_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 
 class AuthController extends GetxController {
-  final AuthenticationRepository _authRepository =
-      Get.put(AuthenticationRepository());
+  static AuthController get instance => Get.find();
 
-  bool get isLoading => _authRepository.isLoading.value;
+  // Controllers for registration and login
+  final phoneController = TextEditingController();
+  final otpController = TextEditingController();
+  final fullNameController = TextEditingController();
 
-  @override
-  void onInit() {
-    super.onInit();
-    // Listen to auth state changes
-    ever(_authRepository.firebaseUser, _handleAuthStateChange);
-  }
+  final RxBool isLoading = false.obs;
+  final RxString userType = ''.obs;
+  final RxBool isOtpSent = false.obs;
+  final RxInt resendTimer = 0.obs;
 
-  // Handle auth state changes
-  void _handleAuthStateChange(User? user) {
-    if (user == null) {
-      // Navigate to login page
-      Get.offAllNamed('/login');
-    } else {
-      // Navigate to GetStarted page
-      Get.to(GetStarted());
-    }
-  }
+  // Dependency
+  final _authRepository = AuthenticationRepository.instance;
 
-  // Register new user with phone number validation
-  Future<void> registerUser({
-    required String name,
-    required String phone,
-    required String pin,
-    required String role,
-  }) async {
-    try {
-      _authRepository.isLoading.value = true;
-
-      // Check if phone number is already registered
-      final bool isPhoneRegistered =
-          await _authRepository.isPhoneNumberRegistered(phone);
-
-      if (isPhoneRegistered) {
-        throw Exception(
-            'This phone number is already registered. Please use a different number or sign in.');
-      }
-
-      // Create user model
-      final userModel = UserModel(
-        fullName: name,
-        phoneNumber: phone,
-        role: role,
-      );
-
-      // Send OTP
-      await _authRepository.sendOTP(phone);
-
-      // Store user model temporarily
-      Get.toNamed('/verify-otp', arguments: userModel);
-    } catch (e) {
-      Get.snackbar(
-        'Registration Error ',
-        e.toString(),
-        backgroundColor: Colors.red[100],
-        duration: const Duration(seconds: 5),
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } finally {
-      _authRepository.isLoading.value = false;
-    }
-  }
-
-  // Verify OTP with additional validation
-  Future<void> verifyOTP(String otp, UserModel userModel) async {
-    try {
-      _authRepository.isLoading.value = true;
-
-      // Double-check phone number uniqueness before final registration
-      final bool isPhoneRegistered =
-          await _authRepository.isPhoneNumberRegistered(userModel.phoneNumber);
-
-      if (isPhoneRegistered) {
-        throw Exception(
-            'This phone number was registered by another user while verification was in progress.');
-      }
-
-      await _authRepository.verifyOTPAndCreateUser(otp, userModel);
-      Get.offAllNamed('/login');
-    } catch (e) {
-      Get.snackbar(
-        'Verification Error',
-        e.toString(),
-        backgroundColor: Colors.red[100],
-        duration: const Duration(seconds: 5),
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } finally {
-      _authRepository.isLoading.value = false;
-    }
-  }
-
-Future<void> signIn(String phoneNumber) async {
-    try {
-      _authRepository.isLoading.value = true;
-
-      final bool isPhoneRegistered =
-          await _authRepository.isPhoneNumberRegistered(phoneNumber);
-
-      if (!isPhoneRegistered) {
-        throw Exception(
-            'No account found with this phone number. Please register first.');
-      }
-
-      await _authRepository.sendOTP(phoneNumber);
-
-      Get.snackbar(
-        'OTP Sent',
-        'An OTP has been sent to $phoneNumber',
-        backgroundColor: Colors.green[100],
-        duration: const Duration(seconds: 3),
-        snackPosition: SnackPosition.BOTTOM,
-      );
-
-      // Navigate to OTP verification page
-      Get.toNamed('/verify-otp');
-    } catch (e) {
-      print('Sign In Error: $e'); // Debug print
-      Get.snackbar(
-        'Sign In Error',
-        e.toString(),
-        backgroundColor: Colors.red[100],
-        duration: const Duration(seconds: 5),
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } finally {
-      _authRepository.isLoading.value = false;
-    }
+  // Normalize phone number - remove leading zero if present
+String normalizePhoneNumber(String phoneNumber) {
+  String normalizedNumber = phoneNumber.trim();
+  
+  // Remove leading zero if present
+  if (normalizedNumber.startsWith('0')) {
+    normalizedNumber = normalizedNumber.substring(1);
   }
   
-  Future<void> verifyOtpSignin(String smsCode) async {
+  // Ensure there's no country code already
+  if (normalizedNumber.startsWith('+233')) {
+    normalizedNumber = normalizedNumber.substring(4);
+  }
+  
+  return normalizedNumber;
+}
+
+  // Validate phone number
+  String? validatePhone(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Phone number is required';
+    }
+    // Basic validation for phone number format
+    // Allowing numbers starting with 0 or not, with total length 9-10 digits
+    final phoneRegex = RegExp(r'^(0)?\d{9}$');
+    if (!phoneRegex.hasMatch(value)) {
+      return 'Enter a valid phone number (e.g., 0242209090)';
+    }
+    return null;
+  }
+
+  // Validate OTP
+  String? validateOTP(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'OTP is required';
+    }
+    if (value.length != 6) {
+      return 'OTP must be 6 digits';
+    }
+    return null;
+  }
+
+  // Send OTP
+  Future<void> sendOTP() async {
     try {
-      // Ensure loading state is set
-      _authRepository.isLoading.value = true;
+      // Validate phone number
+      if (validatePhone(phoneController.text) != null) {
+        Get.snackbar('Error', validatePhone(phoneController.text)!);
+        return;
+      }
 
-      // Verify OTP
-      await _authRepository.signInWithPhoneNumber(
-          _authRepository.verificationId.value, smsCode);
+      isLoading.value = true;
 
-      // Optionally, navigate to home or next screen
-      Get.offAllNamed('/splash');
+      // Normalize phone number before sending
+      String normalizedNumber = normalizePhoneNumber(phoneController.text);
+
+      // Send OTP via repository
+      await _authRepository.sendOTP(normalizedNumber);
+      
+      isOtpSent.value = true;
+      
+      // Start resend timer (60 seconds)
+      resendTimer.value = 60;
+      startResendTimer();
+      
+      Get.snackbar('Success', 'OTP sent to your phone number');
     } catch (e) {
-      Get.snackbar(
-        'Verification Error',
-        e.toString(),
-        backgroundColor: Colors.red[100],
-        duration: const Duration(seconds: 5),
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      Get.snackbar('Error', e.toString(), backgroundColor: Colors.red);
     } finally {
-      // Ensure loading state is reset
-      _authRepository.isLoading.value = false;
+      isLoading.value = false;
     }
   }
 
+  // Start countdown timer for OTP resend
+  void startResendTimer() {
+    Future.delayed(const Duration(seconds: 1), () {
+      if (resendTimer.value > 0) {
+        resendTimer.value--;
+        startResendTimer();
+      }
+    });
+  }
+
+void resetControllers() {
+  // Only clear text, don't dispose
+  phoneController.text = '';
+  otpController.text = '';
+  fullNameController.text = '';
+  isOtpSent.value = false;
+  userType.value = '';
+}
+
+  // Register with phone number and OTP verification
+Future<void> registerUser() async {
+  try {
+    // Validation code remains the same...
+    
+    isLoading.value = true;
+
+    // Store these values before the async operations
+    final String normalizedNumber = normalizePhoneNumber(phoneController.text);
+    final String fullName = fullNameController.text.trim();
+    final String role = userType.value;
+    final String otpCode = otpController.text.trim();
+    
+    // Create user model
+    UserModel newUser = UserModel(
+      phoneNumber: normalizedNumber,
+      fullName: fullName,
+      role: role,
+      createdAt: DateTime.now(),
+    );
+
+    // phoneController.clear();
+    // otpController.clear();
+    // fullNameController.clear();
+    // userType.value = '';
+    // isOtpSent.value = false;
+     resetControllers();
+
+    // Now perform the Firebase operations with our captured values
+    await _authRepository.verifyOTPAndRegister(otpCode, newUser);
+
+    // Show success message
+    Get.snackbar('Success', 'Account created successfully');
+    
+    // The auth state listener in AppRouter will handle navigation based on the user role
+    
+  } catch (e) {
+    Get.snackbar('Error', e.toString(), backgroundColor: Colors.red);
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+  // Login with phone number and OTP
+Future<void> loginUser() async {
+  try {
+    // Validate OTP
+    if (validateOTP(otpController.text) != null) {
+      Get.snackbar('Error', validateOTP(otpController.text)!);
+      return;
+    }
+
+    isLoading.value = true;
+
+    // Check if verification ID is available
+    if (!isOtpSent.value) {
+      Get.snackbar('Error', 'Please request OTP first', backgroundColor: Colors.red);
+      isLoading.value = false;
+      return;
+    }
+
+    // Normalize phone number
+    String normalizedNumber = normalizePhoneNumber(phoneController.text);
+    final String otpCode = otpController.text.trim();
+
+    resetControllers();
+
+    // Verify OTP and login
+    await _authRepository.verifyOTPAndLogin(
+      normalizedNumber,
+      otpCode,
+    );
+
+    
+    
+  } catch (e) {
+    if (e.toString().contains('User not found')) {
+      Get.snackbar(
+        'Account Not Found', 
+        'No account exists with this phone number. Please register first.',
+        backgroundColor: Colors.amber
+      );
+    } else if (e.toString().contains('invalid-verification-code')) {
+      Get.snackbar(
+        'Invalid OTP', 
+        'The verification code you entered is incorrect. Please try again.',
+        backgroundColor: Colors.red
+      );
+    } else {
+      Get.snackbar('Login Error', e.toString(), backgroundColor: Colors.red);
+    }
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+  // Sign out
   Future<void> signOut() async {
     try {
-      // Call the repository's sign out method
       await _authRepository.signOut();
-
-      // Navigate to login page
-      Get.offAllNamed('/login');
     } catch (e) {
-      Get.snackbar(
-        'Sign Out Error',
-        e.toString(),
-        backgroundColor: Colors.red[100],
-        duration: const Duration(seconds: 5),
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      Get.snackbar('Error', e.toString(), backgroundColor: Colors.red);
     }
   }
+
+  // @override
+  // void onClose() {
+  //   // Dispose controllers
+  //   phoneController.dispose();
+  //   otpController.dispose();
+  //   fullNameController.dispose();
+  //   super.onClose();
+  // }
+
 
 }

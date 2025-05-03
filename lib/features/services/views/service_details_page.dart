@@ -3,42 +3,69 @@ import 'package:domo/common/widgets/service/vert_service_card.dart';
 import 'package:domo/common/styles/style.dart';
 import 'package:domo/features/bookings/controller/booking_controller.dart';
 import 'package:domo/features/favorites/controller/favorite_controller.dart';
+import 'package:domo/features/reviews/controllers/review_controller.dart';
 import 'package:domo/features/services/controllers/service_controller.dart';
 import 'package:domo/features/services/views/service_details_page.dart';
 import 'package:domo/features/services/models/service_model.dart';
 import 'package:domo/features/shop/controller/shop_details_controller.dart';
 import 'package:domo/features/shop/model/shop_model.dart';
+import 'package:domo/features/reviews/model/review_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:get/get.dart';
 
-class ServiceDetailsPage extends StatelessWidget {
+class ServiceDetailsPage extends StatefulWidget {
   final ServicesModel service;
 
   const ServiceDetailsPage({super.key, required this.service});
 
-// Add this method to your ServiceDetailsPage
-void _navigateToShopDetails(BuildContext context) async {
-  final ShopDetailsController shopController = Get.put(ShopDetailsController());
-  
-  try {
-    final shop = await shopController.fetchShopDetailsById(service.shopId) as ShopModel?;
-    print ( service.shopId);
-    
-    if (shop != null) {
-      Get.toNamed('/customer/shop-details', arguments: shop);
-    } else {
-      // Handle case where shop details couldn't be fetched
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not fetch shop details')),
-      );
-    }
-  } catch (e) {
-    print('Error navigating to shop details: $e');
-  }
+  @override
+  State<ServiceDetailsPage> createState() => _ServiceDetailsPageState();
 }
 
+class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
+  late ReviewController _reviewController;
 
+  @override
+  void initState() {
+    super.initState();
+    _reviewController = Get.put(ReviewController());
+    // Fetch reviews for this service's shop
+    _reviewController.fetchArtisanReviews(widget.service.shopId);
+  }
+
+  // navigate to shop details page
+  void _navigateToShopDetails(BuildContext context) async {
+    final ShopDetailsController shopController = Get.put(ShopDetailsController());
+    
+    try {
+      // Print the shop ID to validate it's not empty
+      print("Attempting to fetch shop with ID: ${widget.service.shopId}");
+      
+      if (widget.service.shopId == null || widget.service.shopId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Invalid shop ID')),
+        );
+        return;
+      }
+      
+      final shop = await shopController.fetchShopDetailsById(widget.service.shopId);
+      
+      if (shop != null) {
+        // Pass the shop directly, not in a map
+        Get.toNamed('/customer/shop-details', arguments: shop);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not fetch shop details')),
+        );
+      }
+    } catch (e) {
+      print('Error navigating to shop details: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +77,7 @@ void _navigateToShopDetails(BuildContext context) async {
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
-                service.serviceName,
+                widget.service.serviceName,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -58,7 +85,7 @@ void _navigateToShopDetails(BuildContext context) async {
                 ),
               ),
               background: Image.network(
-                service.imageAsset,
+                widget.service.imageAsset,
                 fit: BoxFit.cover,
               ),
             ),
@@ -94,7 +121,7 @@ void _navigateToShopDetails(BuildContext context) async {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '${service.price} GHS',
+          '${widget.service.price} GHS',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: Colors.blue,
                 fontWeight: FontWeight.bold,
@@ -103,7 +130,7 @@ void _navigateToShopDetails(BuildContext context) async {
         const SizedBox(height: 8),
         //location
         Text(
-          service.location,
+          widget.service.location,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.grey[600],
               ),
@@ -113,7 +140,7 @@ void _navigateToShopDetails(BuildContext context) async {
 
         // shop name
         FutureBuilder<String?>(
-          future: shopController.getShopNameById(service.shopId),
+          future: shopController.getShopNameById(widget.service.shopId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Text(
@@ -133,11 +160,7 @@ void _navigateToShopDetails(BuildContext context) async {
               );
             }
             return GestureDetector(
-              onTap: () {
-                Get.toNamed('/customer/shop-details', arguments: {
-                  'shopId': service.shopId,
-                });
-              },
+              onTap: () => _navigateToShopDetails(context),
               child: 
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -158,7 +181,7 @@ void _navigateToShopDetails(BuildContext context) async {
         ),
         const SizedBox(height: 16),
         RatingBar.builder(
-          initialRating: service.rating,
+          initialRating: widget.service.rating,
           minRating: 1,
           direction: Axis.horizontal,
           allowHalfRating: true,
@@ -181,7 +204,7 @@ void _navigateToShopDetails(BuildContext context) async {
         ),
         const SizedBox(height: 8),
         Text(
-          service.description,
+          widget.service.description,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: 16),
@@ -193,29 +216,68 @@ void _navigateToShopDetails(BuildContext context) async {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Reviews',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Reviews',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            Obx(() {
+              final stats = _reviewController.artisanRatingStats;
+              if (stats.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return Text(
+                '${stats['averageRating']?.toStringAsFixed(1) ?? '0.0'} (${stats['totalReviews'] ?? '0'})',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+              );
+            }),
+          ],
         ),
         const SizedBox(height: 8),
-        SizedBox(
-          height: 150,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: 5, // Replace with actual number of reviews
-            itemBuilder: (context, index) {
-              return _buildReviewCard(context, index);
-            },
-          ),
-        ),
+        Obx(() {
+          if (_reviewController.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          
+          final reviews = _reviewController.artisanReviews;
+          
+          if (reviews.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 30.0),
+                child: Text(
+                  'No reviews yet',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Colors.grey[400],
+                      ),
+                ),
+              ),
+            );
+          }
+          
+          return SizedBox(
+            height: 150,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: reviews.length,
+              itemBuilder: (context, index) {
+                return _buildReviewCard(context, reviews[index]);
+              },
+            ),
+          );
+        }),
         const SizedBox(height: 16),
       ],
     );
   }
 
-  Widget _buildReviewCard(BuildContext context, int index) {
+  Widget _buildReviewCard(BuildContext context, ReviewModel review) {
     return Container(
       width: 250,
       margin: const EdgeInsets.only(right: 16),
@@ -237,22 +299,27 @@ void _navigateToShopDetails(BuildContext context) async {
         children: [
           Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 20,
-                backgroundImage: AssetImage('assets/images/p.png'),
+                backgroundColor: Colors.grey[300],
+                child: const Icon(Icons.person, color: Colors.white),
               ),
               const SizedBox(width: 8),
-              Text(
-                'User $index',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
+              // Expanded(
+              //   child: Text(
+              //     // review.customerName ?? 'Anonymous',
+              //     // maxLines: 1,
+              //     overflow: TextOverflow.ellipsis,
+              //     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              //           fontWeight: FontWeight.bold,
+              //         ),
+              //   ),
+              // ),
             ],
           ),
           const SizedBox(height: 8),
           RatingBar.builder(
-            initialRating: 4.5,
+            initialRating: review.rating.toDouble(),
             minRating: 1,
             direction: Axis.horizontal,
             allowHalfRating: true,
@@ -268,7 +335,7 @@ void _navigateToShopDetails(BuildContext context) async {
           ),
           const SizedBox(height: 8),
           Text(
-            'This is a detailed review about the service. It provides insight into the user\'s experience.',
+            review.reviewText,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall,
@@ -278,52 +345,53 @@ void _navigateToShopDetails(BuildContext context) async {
     );
   }
 
-Widget _buildSimilarServicesSection(BuildContext context) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        'You Might Also Like',
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-      ),
-      const SizedBox(height: 8),
-      FutureBuilder<List<ServicesModel>>(
-        future: Get.find<ServiceController>().getServicesBySubThemeId(service.subThemeId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
+  Widget _buildSimilarServicesSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'You Might Also Like',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 8),
+        FutureBuilder<List<ServicesModel>>(
+          future: Get.find<ServiceController>().getServicesBySubThemeId(widget.service.subThemeId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
 
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Text('No similar services found');
-          }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Text('No similar services found');
+            }
 
-          return SizedBox(
-            height: 300, 
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: snapshot.data!.length,
-              itemBuilder: (context, index) {
-                final similarService = snapshot.data![index];
-                return ServiceCard(
-                  service: similarService, 
-                  onPressed: () {
-                    Get.to(
-                      () => ServiceDetailsPage(service: service),
-                      arguments: service,
-                    );
-                  },
-                );
-              },
-            ),
-          );
-        },
-      ),
-    ],
-  );
-}
+            return SizedBox(
+              height: 300, 
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: snapshot.data!.length,
+                itemBuilder: (context, index) {
+                  final similarService = snapshot.data![index];
+                  return ServiceCard(
+                    service: similarService, 
+                    onPressed: () {
+                      // Use the similarService, not the current service
+                      Get.to(
+                        () => ServiceDetailsPage(service: similarService),
+                        arguments: similarService,
+                      );
+                    },
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
 
   Widget _buildBottomActionBar(BuildContext context) {
     final AppRouter appRouter = Get.find<AppRouter>();
@@ -356,7 +424,7 @@ Widget _buildSimilarServicesSection(BuildContext context) {
 
             return FutureBuilder<bool>(
               future: favoritesController.isServiceInFavorites(
-                  userId: userId, serviceId: service.id),
+                  userId: userId, serviceId: widget.service.id),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return ElevatedButton.icon(
@@ -385,7 +453,7 @@ Widget _buildSimilarServicesSection(BuildContext context) {
                             await favoritesController.userFavorites?.first ??
                                 [];
                         final favoriteToRemove = favorites.firstWhere(
-                            (fav) => fav.serviceId == service.id,
+                            (fav) => fav.serviceId == widget.service.id,
                             orElse: () =>
                                 throw Exception('Favorite not found'));
 
@@ -393,7 +461,7 @@ Widget _buildSimilarServicesSection(BuildContext context) {
                             .removeFromFavorites(favoriteToRemove.id);
                       } else {
                         await favoritesController.addToFavorites(
-                            userId: userId, serviceId: service.id);
+                            userId: userId, serviceId: widget.service.id);
                       }
                     } catch (e) {
                       print('Favorite toggle error: $e');
@@ -462,10 +530,11 @@ Widget _buildSimilarServicesSection(BuildContext context) {
         );
 
         await bookingsController.bookService(
-          serviceId: service.id,
-          shopId: '',
+          serviceId: widget.service.id,
+          shopId: widget.service.shopId,
           bookingDate: bookingDateTime,
-          price: service.price,
+          price: widget.service.price,
+          serviceName: widget.service.serviceName,
         );
       }
     }

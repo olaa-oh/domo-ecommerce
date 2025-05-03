@@ -1,30 +1,20 @@
 import 'package:domo/features/authentication/controllers/auth_controller.dart';
-import 'package:domo/features/authentication/views/forget_password.dart';
 import 'package:domo/features/authentication/views/register_page.dart';
 import 'package:domo/common/styles/style.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
 
-class Login extends StatefulWidget {
-  const Login({super.key});
+class Login extends StatelessWidget {
+  Login({super.key});
 
-  @override
-  State<Login> createState() => _LoginState();
-}
-
-class _LoginState extends State<Login> {
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController phoneController = TextEditingController();
-
-  @override
-  void dispose() {
-    phoneController.dispose();
-    super.dispose();
-  }
+  // Create a global form key
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
+    // final AuthController authController = Get.put(AuthController());
+    final AuthController authController = Get.find<AuthController>();
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
@@ -60,7 +50,7 @@ class _LoginState extends State<Login> {
                 ),
                 const SizedBox(height: 40),
                 TextFormField(
-                  controller: phoneController,
+                  controller: authController.phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
                     hintText: 'Enter your phone number',
@@ -72,66 +62,136 @@ class _LoginState extends State<Login> {
                       borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your phone number';
-                    }
-                    if (value.length < 10) {
-                      return 'Please enter a valid phone number';
-                    }
-                    return null;
-                  },
+                  validator: authController.validatePhone,
                 ),
                 const SizedBox(height: 30),
-                ElevatedButton(
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.all<Color>(AppTheme.button),
-                    padding: WidgetStateProperty.all<EdgeInsetsGeometry>(
-                      const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
-                    ),
-                    shape: WidgetStateProperty.all<RoundedRectangleBorder>(
-                      RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                
+                // OTP Request Button or OTP Input based on state
+                Obx(() => !authController.isOtpSent.value
+                  ? ElevatedButton(
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.all<Color>(AppTheme.button),
+                        padding: WidgetStateProperty.all<EdgeInsetsGeometry>(
+                          const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
+                        ),
+                        shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      final controller = Get.put(AuthController());
-                      String phoneNumber = phoneController.text.trim();
-
-                      // Send OTP and navigate to OTP verification page
-                      controller.signIn(phoneNumber);
-                      Get.toNamed('/verify-otp');
-                    }
-                  },
-                  child: Text(
-                    'Login',
-                    style: AppTheme.textTheme.labelLarge!.copyWith(
-                      color: AppTheme.background,
-                    ),
-                  ),
+                      onPressed: authController.isLoading.value 
+                        ? null 
+                        : () {
+                            if (_formKey.currentState!.validate()) {
+                              authController.sendOTP();
+                            }
+                          },
+                      child: authController.isLoading.value
+                        ? const CircularProgressIndicator(color: AppTheme.background)
+                        : Text(
+                            'Send OTP',
+                            style: AppTheme.textTheme.labelLarge!.copyWith(
+                              color: AppTheme.background,
+                            ),
+                          ),
+                    )
+                  : Column(
+                      children: [
+                        Text(
+                          'Enter the 6-digit OTP sent to your phone',
+                          style: AppTheme.textTheme.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 15),
+                        PinCodeTextField(
+                          appContext: context,
+                          length: 6,
+                          controller: authController.otpController,
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {},
+                          pinTheme: PinTheme(
+                            shape: PinCodeFieldShape.box,
+                            borderRadius: BorderRadius.circular(8),
+                            activeColor: AppTheme.button,
+                            inactiveColor: AppTheme.button.withOpacity(0.5),
+                            selectedColor: AppTheme.button,
+                          ),
+                        ),
+                        const SizedBox(height: 15),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Obx(() => Text(
+                              authController.resendTimer.value > 0
+                                ? 'Resend OTP in ${authController.resendTimer.value}s'
+                                : 'Didn\'t receive OTP?',
+                              style: AppTheme.textTheme.bodySmall,
+                            )),
+                            const SizedBox(width: 5),
+                            Obx(() => TextButton(
+                              onPressed: authController.resendTimer.value > 0 || authController.isLoading.value
+                                ? null
+                                : () => authController.sendOTP(),
+                              child: Text(
+                                'Resend',
+                                style: AppTheme.textTheme.bodySmall!.copyWith(
+                                  color: authController.resendTimer.value > 0
+                                    ? Colors.grey
+                                    : AppTheme.button,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )),
+                          ],
+                        ),
+                        const SizedBox(height: 15),
+                        ElevatedButton(
+                          style: ButtonStyle(
+                            backgroundColor: WidgetStateProperty.all<Color>(AppTheme.button),
+                            padding: WidgetStateProperty.all<EdgeInsetsGeometry>(
+                              const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
+                            ),
+                            shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+                              RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                          ),
+                          onPressed: authController.isLoading.value 
+                            ? null 
+                            : () {
+                                // Validate OTP before proceeding
+                                final otpValidation = authController.validateOTP(authController.otpController.text);
+                                if (otpValidation != null) {
+                                  Get.snackbar('Error', otpValidation, backgroundColor: Colors.red);
+                                  return;
+                                }
+                                authController.loginUser();
+                              },
+                          child: authController.isLoading.value
+                            ? const CircularProgressIndicator(color: AppTheme.background)
+                            : Text(
+                                'Login',
+                                style: AppTheme.textTheme.labelLarge!.copyWith(
+                                  color: AppTheme.background,
+                                ),
+                              ),
+                        )                      ],
+                    )
                 ),
+                
                 const SizedBox(height: 40),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      "Do not have an account? ",
+                    TextButton(
+                     onPressed: () => Get.toNamed('/register'),
+                     child: Text(
+                      "Do not have an account?Sign Up",
                       style: AppTheme.textTheme.titleMedium!.copyWith(
                         color: AppTheme.button,
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        Get.to(() => const RegisterPage());
-                      },
-                      child: Text(
-                        "Sign Up",
-                        style: AppTheme.textTheme.titleMedium!.copyWith(
-                          color: AppTheme.darkBackground,
-                          fontWeight: FontWeight.bold,
-                        ),
                       ),
                     ),
                   ],

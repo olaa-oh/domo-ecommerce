@@ -53,6 +53,27 @@ class ShopRepository {
     }
   }
 
+
+  Future<ShopModel?> fetchShopByArtisanId(String artisanId) async {
+  try {
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('shops')
+        .where('artisanId', isEqualTo: artisanId)
+        .limit(1)
+        .get();
+
+    if (querySnapshot.docs.isNotEmpty) {
+      final shopData = querySnapshot.docs.first.data();
+      shopData['id'] = querySnapshot.docs.first.id;
+      return ShopModel.fromJson(shopData);
+    }
+    return null;
+  } catch (e) {
+    print('Error fetching shop by artisan ID: $e');
+    return null;
+  }
+}
+
   // Update shop details
 Future<void> updateShop(ShopModel shop) async {
   try {

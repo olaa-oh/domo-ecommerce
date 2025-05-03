@@ -130,7 +130,7 @@ class _CustomerHomepageState extends State<CustomerHomepage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Hello, there!',
+          'Hello, Super!',
           style: theme.textTheme.headlineLarge?.copyWith(
             color: theme.colorScheme.secondary,
             fontWeight: FontWeight.bold,
@@ -138,10 +138,15 @@ class _CustomerHomepageState extends State<CustomerHomepage> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              Get.toNamed('/search');
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
               Get.toNamed('/you');
-              
             },
           ),
         ],
@@ -154,43 +159,7 @@ class _CustomerHomepageState extends State<CustomerHomepage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Search Bar with Location Selection
-            Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: const InputDecoration(
-                      hintText: 'Search ',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: AppTheme.buttonRadius,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _showLocationBottomSheet,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.secondary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: AppTheme.buttonRadius,
-                      ),
-                    ),
-                    child: Text(
-                      _selectedLocation,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSecondary,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          
             const SizedBox(height: 16),
             // Themes of services
             Row(
@@ -396,6 +365,5 @@ class _CustomerHomepageState extends State<CustomerHomepage> {
   }
 
 
-  // booking widget
   
 }

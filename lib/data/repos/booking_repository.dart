@@ -11,10 +11,11 @@ class BookingRepository {
   // Book a service
   Future<BookingModel?> bookService({
     required String serviceId, 
-     String? shopId,
+    required String shopId,
     required DateTime bookingDate,
     String notes = '',
     required double price,
+    required String serviceName,
   }) async {
     try {
       // Check if user already has an active booking for this service
@@ -29,11 +30,12 @@ class BookingRepository {
         id: bookingRef.id,
         serviceId: serviceId,
         customerId: _auth.currentUser!.uid,
-        shopId: shopId ?? '',
+        shopId: shopId ,
         bookingDate: bookingDate,
         status: 'pending',
         notes: notes,
         price: price,
+        serviceName: serviceName,
       );
 
       await bookingRef.set(booking.toJson());
@@ -44,6 +46,22 @@ class BookingRepository {
   }
 
 
+    //  method to update booking with review ID
+  Future<BookingModel?> updateBookingWithReviewId(String bookingId, String reviewId) async {
+    try {
+      await _firestore.collection('bookings').doc(bookingId).update({
+        'reviewId': reviewId,
+        'isReviewed': true,
+      });
+      
+      // Return updated booking
+      final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
+      return BookingModel.fromSnapshot(bookingDoc);
+    } catch (e) {
+      print('Error updating booking with review ID: $e');
+      rethrow;
+    }
+  }
 
   // Check for existing active booking
   Future<BookingModel?> _checkExistingActiveBooking(String serviceId) async {
@@ -193,12 +211,66 @@ Stream<List<BookingModel>> fetchUserBookings() {
       // Update booking to completed status
       await _firestore.collection('bookings').doc(bookingId).update({
         'status': 'completed',
+        'isReviewed': false,  
       });
 
       return true;
     } catch (e) {
       print('Error confirming booking completion: $e');
       rethrow;
+    }
+  }
+
+  // Get all completed bookings by id
+  Future<BookingModel?> getBookingById(String bookingId) async {
+    try {
+      final docSnapshot = await _firestore
+          .collection('bookings')
+          .doc(bookingId)
+          .get();
+      
+      if (!docSnapshot.exists || docSnapshot.data() == null) {
+        return null;
+      }
+      
+      return BookingModel.fromSnapshot(docSnapshot);
+    } catch (e) {
+      throw 'Error fetching booking: $e';
+    }
+  }
+      // Get all completed bookings that haven't been reviewed
+  Future<List<BookingModel>> getBookingsEligibleForReview() async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('bookings')
+          .where('customerId', isEqualTo: _auth.currentUser!.uid)
+          .where('status', isEqualTo: 'completed')
+          .where('isReviewed', isEqualTo: false)
+          .get();
+          
+      return querySnapshot.docs.map((doc) => BookingModel.fromSnapshot(doc)).toList();
+    } catch (e) {
+      print('Error getting bookings eligible for review: $e');
+      rethrow;
+    }
+  }
+
+
+    // Check if a booking is eligible for review
+  Future<bool> isBookingEligibleForReview(String bookingId) async {
+    try {
+      final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
+      if (!bookingDoc.exists) {
+        return false;
+      }
+      
+      final booking = BookingModel.fromSnapshot(bookingDoc);
+      
+      // Check if booking is completed and not yet reviewed
+      return booking.status == 'completed' && !booking.isReviewed;
+    } catch (e) {
+      print('Error checking booking eligibility for review: $e');
+      return false;
     }
   }
 

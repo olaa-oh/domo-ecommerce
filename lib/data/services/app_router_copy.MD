@@ -1,14 +1,12 @@
 import 'package:domo/common/widgets/nav/artisan_navigation.dart';
 import 'package:domo/common/widgets/nav/customer_navigation.dart';
-import 'package:domo/features/bookings/controller/booking_controller.dart';
-import 'package:domo/features/home/views/search_drawer.dart';
 import 'package:domo/data/repos/shop_repository.dart';
 import 'package:domo/features/bookings/views/appointments.dart';
 import 'package:domo/features/authentication/views/login_page.dart';
+import 'package:domo/features/authentication/views/otp.dart';
 import 'package:domo/features/authentication/views/register_page.dart';
 import 'package:domo/features/bookings/views/booking_per_service.dart';
 import 'package:domo/features/bookings/views/bookings.dart';
-import 'package:domo/features/services/controllers/service_controller.dart';
 import 'package:domo/features/services/views/artisan_dashboard.dart';
 import 'package:domo/features/personalisation/views/artisan_homepage.dart';
 import 'package:domo/features/home/views/customer_homepage.dart';
@@ -20,7 +18,6 @@ import 'package:domo/features/personalisation/views/you_page.dart';
 import 'package:domo/features/services/views/artisan_service_details.dart';
 import 'package:domo/features/services/views/service_details_page.dart';
 import 'package:domo/features/services/models/service_model.dart';
-import 'package:domo/features/favorites/views/service_history.dart';
 import 'package:domo/features/shop/controller/shop_details_controller.dart';
 import 'package:domo/features/shop/model/shop_model.dart';
 import 'package:domo/features/shop/views/shop_details.dart';
@@ -45,40 +42,61 @@ class AppRouter extends GetxController {
   final Rx<User?> user = Rx<User?>(null);
   final Rx<String?> userRole = Rx<String?>(null);
   final Rx<String?> userId = Rx<String?>(null);
-  
-  // Flag to prevent multiple navigation attempts
-  final RxBool isNavigating = false.obs;
 
   @override
+  // Future<void> onInit() async {
+  //   super.onInit();
+  //   try {
+  //     // Initialize Firebase first
+  //     await Firebase.initializeApp();
+
+  //     // Only initialize Firebase services after Firebase is initialized
+  //     _auth = FirebaseAuth.instance;
+  //     _firestore = FirebaseFirestore.instance;
+
+  //     // Set up auth state listener
+  //     ever(user, _handleAuthStateChange);
+  //     user.bindStream(_auth.authStateChanges());
+  //     ever(user, (currentUser) {
+  //       userId.value = currentUser?.uid; // Automatically update userId
+  //     });
+
+  //     isLoading.value = false;
+  //   } catch (e) {
+  //     print('Error initializing Firebase: $e');
+  //     isLoading.value = false;
+  //     // Handle initialization error (maybe show an error screen)
+  //     Get.offAllNamed('/error');
+  //   }
+  // }
+
   Future<void> onInit() async {
-    super.onInit();
-    try {
-      // Initialize Firebase first
-      await Firebase.initializeApp();
+  super.onInit();
+  try {
+    // Initialize Firebase first
+    await Firebase.initializeApp();
 
-      // Only initialize Firebase services after Firebase is initialized
-      _auth = FirebaseAuth.instance;
-      _firestore = FirebaseFirestore.instance;
+    // Only initialize Firebase services after Firebase is initialized
+    _auth = FirebaseAuth.instance;
+    _firestore = FirebaseFirestore.instance;
 
-      // Set up auth state listener
-      ever(user, _handleAuthStateChange);
-      
-      // Make sure this stream is correctly updating the user observable
-      user.bindStream(_auth.authStateChanges());
-      
-      // Update userId when user changes
-      ever(user, (currentUser) {
-        userId.value = currentUser?.uid; 
-        print('User updated: ${currentUser?.uid}');
-      });
+    // Set up auth state listener
+    ever(user, _handleAuthStateChange);
+    // Make sure this stream is correctly updating the user observable
+    user.bindStream(_auth.authStateChanges());
+    
+    ever(user, (currentUser) {
+      userId.value = currentUser?.uid; 
+      print('User updated: ${currentUser?.uid}');
+    });
 
-      isLoading.value = false;
-    } catch (e) {
-      print('Error initializing Firebase: $e');
-      isLoading.value = false;
-      Get.offAllNamed('/error');
-    }
+    isLoading.value = false;
+  } catch (e) {
+    print('Error initializing Firebase: $e');
+    isLoading.value = false;
+    Get.offAllNamed('/error');
   }
+}
 
   // Check if it's first time launching the app
   bool get isFirstTime => _storage.read(FIRST_TIME_KEY) ?? true;
@@ -88,48 +106,23 @@ class AppRouter extends GetxController {
     await _storage.write(FIRST_TIME_KEY, false);
   }
 
-  // Improved method to fetch user role with retry logic
-  Future<String?> _fetchUserRole(String uid) async {
+  // Fetch user role from Firestore
+  Future<void> _fetchUserRole(String uid) async {
     try {
-      // First attempt
       final doc = await _firestore.collection('users').doc(uid).get();
-      if (doc.exists && doc.data()?['role'] != null) {
-        String role = doc.data()?['role'];
-        userRole.value = role;
-        return role;
+      if (doc.exists) {
+        userRole.value = doc.data()?['role'];
       }
-      
-      // If role not found, wait briefly and retry (handles race condition)
-      await Future.delayed(Duration(milliseconds: 500));
-      
-      // Second attempt
-      final retryDoc = await _firestore.collection('users').doc(uid).get();
-      if (retryDoc.exists && retryDoc.data()?['role'] != null) {
-        String role = retryDoc.data()?['role'];
-        userRole.value = role;
-        return role;
-      }
-      
-      // If still not found after retry
-      print('No role found for user $uid after retry');
-      userRole.value = null;
-      return null;
     } catch (e) {
       print('Error fetching user role: $e');
       userRole.value = null;
-      return null;
     }
   }
 
-// In app_router.dart, _handleAuthStateChange method
+
+
 Future<void> _handleAuthStateChange(User? currentUser) async {
-  if (isNavigating.value) {
-    print('Navigation already in progress, ignoring auth state change');
-    return;
-  }
-  
   try {
-    isNavigating.value = true;
     isLoading.value = true;
     print('Auth state changed. User: ${currentUser?.uid}');
 
@@ -137,36 +130,11 @@ Future<void> _handleAuthStateChange(User? currentUser) async {
       print('User is null, navigating to splash');
       Get.offAllNamed('/splash');
     } else {
-      // Add more detailed logging
-      print('User authenticated. Fetching user role from Firestore...');
-      
-      // Fetch user role with logging
-      String? role;
-      for (int i = 0; i < 3; i++) {
-        print('Attempt ${i+1} to fetch user role');
-        final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
-        
-        if (userDoc.exists) {
-          print('User document found: ${userDoc.id}');
-          if (userDoc.data()?['role'] != null) {
-            role = userDoc.data()?['role'];
-            userRole.value = role;
-            print('User role set to: $role');
-            break;
-          } else {
-            print('Role field missing in user document');
-          }
-        } else {
-          print('User document not found');
-        }
-        
-        print('Waiting before retry...');
-        await Future.delayed(Duration(milliseconds: 500));
-      }
-      
-      print('Final user role determination: $role');
+      await _fetchUserRole(currentUser.uid);
+      print('User role fetched: ${userRole.value}');
 
-      if (role == 'artisan') {
+      if (userRole.value == 'artisan') {
+        // Existing artisan code
         print('User is artisan, checking shop');
         final shopRepository = ShopRepository();
         final existingShop = await shopRepository.getShopByArtisanId(currentUser.uid);
@@ -177,25 +145,20 @@ Future<void> _handleAuthStateChange(User? currentUser) async {
         } else {
           print('Shop found, navigating to artisan dashboard');
           Get.offAllNamed('/artisan/navBar');
-          print('Navigation to artisan dashboard completed');
         }
-      } else if (role == 'customer') {
+      } else {
         print('User is customer, navigating to customer dashboard');
         Get.offAllNamed('/customer/navBar');
-        print('Navigation to customer dashboard completed');
-      } else {
-        print('User role unknown or null ($role), not navigating');
       }
     }
   } catch (e) {
     print('Error in auth state change handler: $e');
   } finally {
     isLoading.value = false;
-    // Reset navigation flag immediately
-    isNavigating.value = false;
-    print('Auth state handling completed, navigation flag reset');
   }
 }
+
+  // Define app routes
   static final routes = [
     // Splash and onboarding
     GetPage(name: '/splash', page: () => const SplashScreen()),
@@ -264,18 +227,6 @@ Future<void> _handleAuthStateChange(User? currentUser) async {
         return ServiceDetailsPage(service: service);
       },
     ),
-    // search page 
-    GetPage(name: '/search', page: () => const SearchPage()),
-    // service history page
-      GetPage(
-      name: '/service-history',
-      page: () => const ServiceHistoryPage(),
-      binding: BindingsBuilder(() {
-        Get.lazyPut<BookingsController>(() => BookingsController());
-        Get.lazyPut<ServiceController>(() => ServiceController());
-      }),
-    ),
-
     // bookings page
     GetPage(name: '/bookings', page: () => const BookingsPage()),
     GetPage(
@@ -302,7 +253,7 @@ Future<void> _handleAuthStateChange(User? currentUser) async {
   ];
 }
 
-// Rest of the classes remain unchanged
+// Wrapper widget to handle loading state and initial routing
 class AppRouterWrapper extends StatelessWidget {
   final Widget child;
 

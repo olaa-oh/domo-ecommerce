@@ -1,6 +1,7 @@
 import 'package:domo/common/navigation/app_router.dart';
 import 'package:domo/data/repos/auth_repository.dart';
 import 'package:domo/common/styles/style.dart';
+import 'package:domo/features/authentication/controllers/auth_controller.dart';
 import 'package:domo/features/favorites/controller/favorite_controller.dart';
 import 'package:domo/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -14,22 +15,23 @@ import 'package:geolocator/geolocator.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-
-
-
-
   // Initialize local storage
   await GetStorage.init();
   Get.put(AppRouter());
 
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
-      .then((FirebaseApp value) {
+      .then((FirebaseApp value)  {
     print('Firebase initialized');
+
     Get.put(AuthenticationRepository());
     Get.put(FavoritesController());     
     Get.put(ServiceController());
+    Get.put(AuthController(), permanent: true);
     // Get.put(AuthController());
+    // Get.put(AuthenticationRepository());
+    // Get.put(RegistrationController());
+    // Get.put(UserRepository());
   });
 
   Future<void> checkLocationPermission() async {
@@ -39,9 +41,7 @@ Future<void> main() async {
   }
 }
 
-  // Get.put(AuthenticationRepository());
-  // Get.put(RegistrationController());
-  // Get.put(UserRepository());
+
 
   runApp(const MainApp());
 }
@@ -62,10 +62,5 @@ class _MainAppState extends State<MainApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme().light,
     );
-    // GetMaterialApp(
-    //   debugShowCheckedModeBanner: false,
-    //   theme: AppTheme().light,
-    //   home: const SplashScreen(),
-    // );
   }
 }

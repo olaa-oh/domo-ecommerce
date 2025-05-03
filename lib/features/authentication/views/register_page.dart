@@ -1,51 +1,20 @@
-import 'package:domo/features/authentication/controllers/auth_controller.dart';
-import 'package:domo/features/authentication/views/login_page.dart';
-import 'package:domo/common/styles/style.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:domo/common/styles/style.dart';
+import 'package:domo/features/authentication/controllers/auth_controller.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
 
-class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+class RegisterPage extends StatelessWidget {
+  RegisterPage({super.key});
 
-  @override
-  State<RegisterPage> createState() => _RegisterPageState();
-}
-
-class _RegisterPageState extends State<RegisterPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _pinController = TextEditingController();
-  final _pin2Controller = TextEditingController();
-
-  final _role = 'customer'.obs;
-  bool _obscurePin = true;
-  bool _obscurePin2 = true;
-
-  void setRole(String value) => _role.value = value;
-
-  String? validatePhoneNumber(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your phone number';
-    }
-    if (!RegExp(r'^\+[1-9]\d{1,14}$').hasMatch(value)) {
-      return 'Please enter your country code';
-    }
-    return null;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    _pinController.dispose();
-    _pin2Controller.dispose();
-    super.dispose();
-  }
+  // Create a global form key
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
+    // final AuthController authController = Get.find(AuthController());
+    final AuthController authController = Get.find<AuthController>();
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
@@ -80,11 +49,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
                 const SizedBox(height: 30),
-                // Name field
                 TextFormField(
-                  controller: _nameController,
+                  controller: authController.fullNameController,
                   decoration: InputDecoration(
-                    hintText: 'Adam Eve',
+                    hintText: 'Full Name',
                     hintStyle: TextStyle(
                       color: AppTheme.button.withOpacity(0.5),
                     ),
@@ -96,17 +64,17 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your name';
+                      return 'Please enter your full name';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 30),
-                // Phone number field
                 TextFormField(
-                  controller: _phoneController,
+                  controller: authController.phoneController,
+                  keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
-                    hintText: '+233012345678',
+                    hintText: 'Phone Number',
                     hintStyle: TextStyle(
                       color: AppTheme.button.withOpacity(0.5),
                     ),
@@ -115,173 +83,154 @@ class _RegisterPageState extends State<RegisterPage> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-                  keyboardType: TextInputType.phone,
-                  validator: validatePhoneNumber,
+                  validator: authController.validatePhone,
                 ),
                 const SizedBox(height: 30),
-                // PIN field
-                TextFormField(
-                  controller: _pinController,
-                  obscureText: _obscurePin,
-                  decoration: InputDecoration(
-                    hintText: 'Enter your PIN',
-                    hintStyle: TextStyle(
-                      color: AppTheme.button.withOpacity(0.5),
-                    ),
-                    prefixIcon: const Icon(Icons.lock, color: AppTheme.button),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePin ? Icons.visibility_off : Icons.visibility,
-                        color: AppTheme.button,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePin = !_obscurePin;
-                        });
-                      },
-                    ),
-                    border: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
-                    ),
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(4),
-                  ],
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your PIN';
-                    }
-                    if (value.length != 4) {
-                      return 'PIN must be 4 digits';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 30),
-                // Confirm PIN field
-                TextFormField(
-                  controller: _pin2Controller,
-                  obscureText: _obscurePin2,
-                  decoration: InputDecoration(
-                    hintText: 'Re-enter your PIN',
-                    hintStyle: TextStyle(
-                      color: AppTheme.button.withOpacity(0.5),
-                    ),
-                    prefixIcon: const Icon(Icons.lock, color: AppTheme.button),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePin2 ? Icons.visibility_off : Icons.visibility,
-                        color: AppTheme.button,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePin2 = !_obscurePin2;
-                        });
-                      },
-                    ),
-                    border: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
-                    ),
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(4),
-                  ],
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please re-enter your PIN';
-                    }
-                    if (value != _pinController.text) {
-                      return 'PINs do not match';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 30),
-                Text(
-                  "Select your role",
-                  style: AppTheme.textTheme.titleMedium,
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Obx(() => Radio<String>(
+
+                // User Role Selection
+                Obx(() => Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Radio<String>(
                           value: 'customer',
-                          groupValue: _role.value,
-                          onChanged: (value) => setRole(value!),
-                        )),
-                    const Text('Customer'),
-                    const SizedBox(width: 30),
-                    Obx(() => Radio<String>(
-                          value: 'artisan',
-                          groupValue: _role.value,
-                          onChanged: (value) => setRole(value!),
-                        )),
-                    const Text('Artisan'),
-                  ],
-                ),
-                const SizedBox(height: 30),
-                ElevatedButton(
-                  style: ButtonStyle(
-                    backgroundColor:
-                        WidgetStateProperty.all<Color>(AppTheme.button),
-                    padding: WidgetStateProperty.all<EdgeInsetsGeometry>(
-                      const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
-                    ),
-                    shape: WidgetStateProperty.all<RoundedRectangleBorder>(
-                      RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                    ),
-                  ),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      if (_role.value.isEmpty) {
-                        Get.snackbar('Error', 'Please select a role');
-                      } else {
-                        final controller = Get.put(AuthController());
-                        controller.registerUser(
-                          name: _nameController.text,
-                          phone: _phoneController.text,
-                          pin: _pinController.text,
-                          role: _role.value,
-                        );
-                      }
-                    }
-                  },
-                  child: Text(
-                    'Sign Up',
-                    style: AppTheme.textTheme.titleMedium!.copyWith(
-                      color: AppTheme.background,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 30),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Already have an account? ",
-                      style: AppTheme.textTheme.titleMedium!.copyWith(
-                        color: AppTheme.button,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        Get.to(() => const Login());
-                      },
-                      child: Text(
-                        "Log In",
-                        style: AppTheme.textTheme.titleMedium!.copyWith(
-                          color: AppTheme.darkBackground,
-                          fontWeight: FontWeight.bold,
+                          groupValue: authController.userType.value,
+                          onChanged: (value) {
+                            authController.userType.value = value!;
+                          },
                         ),
-                      ),
-                    ),
-                  ],
+                        Text(
+                          'Customer',
+                          style: AppTheme.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(width: 20),
+                        Radio<String>(
+                          value: 'artisan',
+                          groupValue: authController.userType.value,
+                          onChanged: (value) {
+                            authController.userType.value = value!;
+                          },
+                        ),
+                        Text(
+                          'Artisan',
+                          style: AppTheme.textTheme.bodyMedium,
+                        ),
+                      ],
+                    )),
+
+                const SizedBox(height: 20),
+
+                // OTP Request Button or OTP Input based on state
+                Obx(() => !authController.isOtpSent.value
+                    ? ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.button,
+                          minimumSize: const Size(double.infinity, 50),
+                        ),
+                        onPressed: authController.isLoading.value
+                            ? null
+                            : () {
+                                if (_formKey.currentState!.validate()) {
+                                  if (authController.userType.value.isEmpty) {
+                                    Get.snackbar(
+                                        'Error', 'Please select a user type');
+                                    return;
+                                  }
+                                  authController.sendOTP();
+                                }
+                              },
+                        child: authController.isLoading.value
+                            ? const CircularProgressIndicator(
+                                color: AppTheme.background)
+                            : Text(
+                                'Send OTP',
+                                style: AppTheme.textTheme.labelLarge!.copyWith(
+                                  color: AppTheme.background,
+                                ),
+                              ),
+                      )
+                    : Column(
+                        children: [
+                          Text(
+                            'Enter the 6-digit OTP sent to your phone',
+                            style: AppTheme.textTheme.bodyMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 15),
+                          PinCodeTextField(
+                            appContext: context,
+                            length: 6,
+                            controller: authController.otpController,
+                            keyboardType: TextInputType.number,
+                            onChanged: (value) {},
+                            pinTheme: PinTheme(
+                              shape: PinCodeFieldShape.box,
+                              borderRadius: BorderRadius.circular(8),
+                              activeColor: AppTheme.button,
+                              inactiveColor: AppTheme.button.withOpacity(0.5),
+                              selectedColor: AppTheme.button,
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Obx(() => Text(
+                                    authController.resendTimer.value > 0
+                                        ? 'Resend OTP in ${authController.resendTimer.value}s'
+                                        : 'Didn\'t receive OTP?',
+                                    style: AppTheme.textTheme.bodySmall,
+                                  )),
+                              const SizedBox(width: 5),
+                              Obx(() => TextButton(
+                                    onPressed:
+                                        authController.resendTimer.value > 0 ||
+                                                authController.isLoading.value
+                                            ? null
+                                            : () => authController.sendOTP(),
+                                    child: Text(
+                                      'Resend',
+                                      style: AppTheme.textTheme.bodySmall!
+                                          .copyWith(
+                                        color:
+                                            authController.resendTimer.value > 0
+                                                ? Colors.grey
+                                                : AppTheme.button,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  )),
+                            ],
+                          ),
+                          const SizedBox(height: 15),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.button,
+                              minimumSize: const Size(double.infinity, 50),
+                            ),
+                            onPressed: authController.isLoading.value
+                                ? null
+                                : () => authController.registerUser(),
+                            child: authController.isLoading.value
+                                ? const CircularProgressIndicator(
+                                    color: AppTheme.background)
+                                : Text(
+                                    'Register',
+                                    style:
+                                        AppTheme.textTheme.labelLarge!.copyWith(
+                                      color: AppTheme.background,
+                                    ),
+                                  ),
+                          ),
+                        ],
+                      )),
+
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () => Get.toNamed('/login'),
+                  child: Text(
+                    'Already have an account? Login',
+                    style: AppTheme.textTheme.bodyMedium,
+                  ),
                 ),
               ],
             ),

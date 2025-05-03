@@ -17,7 +17,7 @@ class ArtisanHomepage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Shop Details', 
+          'Shop Details',
           style: theme.textTheme.titleLarge?.copyWith(
             color: theme.colorScheme.onPrimary,
             fontWeight: FontWeight.bold,
@@ -25,16 +25,15 @@ class ArtisanHomepage extends StatelessWidget {
         ),
         backgroundColor: theme.colorScheme.primary,
         actions: [
-          IconButton(onPressed: 
-            () => Get.toNamed('/you'),
-          icon: Icon(Icons.person_2_outlined,
-            color: theme.colorScheme.onPrimary,
-          )),
+          IconButton(
+              onPressed: () => Get.toNamed('/you'),
+              icon: Icon(
+                Icons.person_2_outlined,
+                color: theme.colorScheme.onPrimary,
+              )),
           Obx(() => IconButton(
                 icon: Icon(
-                  controller.isEditMode.value 
-                    ? Icons.cancel 
-                    : Icons.edit,
+                  controller.isEditMode.value ? Icons.cancel : Icons.edit,
                   color: theme.colorScheme.onPrimary,
                 ),
                 onPressed: controller.toggleEditMode,
@@ -50,10 +49,7 @@ class ArtisanHomepage extends StatelessWidget {
   }
 
   Widget _buildShopDetailsContent(
-    BuildContext context, 
-    ShopDetailsController controller, 
-    ShopModel shop
-  ) {
+      BuildContext context, ShopDetailsController controller, ShopModel shop) {
     final theme = Theme.of(context);
     return SingleChildScrollView(
       padding: AppTheme.screenPadding,
@@ -64,56 +60,56 @@ class ArtisanHomepage extends StatelessWidget {
           children: [
             // Shop Image
             _buildShopImage(controller),
-            
+
             const SizedBox(height: 24),
-            
+
             // Card-based form fields
             _buildDetailCard(
-              context, 
+              context,
               title: 'Shop Name',
               child: _buildNameField(controller),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             _buildDetailCard(
-              context, 
+              context,
               title: 'Contact Information',
               child: _buildPhoneField(controller),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             _buildDetailCard(
-              context, 
+              context,
               title: 'Shop Description',
               child: _buildDescriptionField(controller),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             _buildDetailCard(
-              context, 
+              context,
               title: 'Service Modes',
               child: _buildServiceModes(controller),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             _buildDetailCard(
-              context, 
+              context,
               title: 'Operating Hours',
               child: _buildOperatingHours(controller),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             _buildDetailCard(
-              context, 
+              context,
               title: 'Location',
               child: _buildLocationSection(controller),
             ),
-            
+
             // Edit/Save Button
             if (controller.isEditMode.value)
               Padding(
@@ -126,10 +122,8 @@ class ArtisanHomepage extends StatelessWidget {
     );
   }
 
-Widget _buildDetailCard(BuildContext context, {
-    required String title, 
-    required Widget child
-  }) {
+  Widget _buildDetailCard(BuildContext context,
+      {required String title, required Widget child}) {
     final theme = Theme.of(context);
     return Card(
       elevation: 4,
@@ -182,7 +176,9 @@ Widget _buildDetailCard(BuildContext context, {
             ),
             child: controller.isEditMode.value
                 ? const Icon(Icons.camera_alt, color: Colors.white, size: 50)
-                : (shop.image.isEmpty ? Icon(Icons.camera_alt, color: Colors.grey[600], size: 50) : null),
+                : (shop.image.isEmpty
+                    ? Icon(Icons.camera_alt, color: Colors.grey[600], size: 50)
+                    : null),
           ),
         ),
       );
@@ -196,8 +192,8 @@ Widget _buildDetailCard(BuildContext context, {
             labelText: 'Shop Name',
             enabled: controller.isEditMode.value,
           ),
-          validator: (value) => 
-            value == null || value.isEmpty ? 'Shop name is required' : null,
+          validator: (value) =>
+              value == null || value.isEmpty ? 'Shop name is required' : null,
         ));
   }
 
@@ -209,8 +205,9 @@ Widget _buildDetailCard(BuildContext context, {
             enabled: controller.isEditMode.value,
           ),
           keyboardType: TextInputType.phone,
-          validator: (value) => 
-            value == null || value.isEmpty ? 'Phone number is required' : null,
+          validator: (value) => value == null || value.isEmpty
+              ? 'Phone number is required'
+              : null,
         ));
   }
 
@@ -222,8 +219,8 @@ Widget _buildDetailCard(BuildContext context, {
             enabled: controller.isEditMode.value,
           ),
           maxLines: 3,
-          validator: (value) => 
-            value == null || value.isEmpty ? 'Description is required' : null,
+          validator: (value) =>
+              value == null || value.isEmpty ? 'Description is required' : null,
         ));
   }
 
@@ -233,29 +230,25 @@ Widget _buildDetailCard(BuildContext context, {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Service Modes', 
-            style: TextStyle(fontWeight: FontWeight.bold)
-          ),
+          const Text('Service Modes',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           if (!isEditMode)
-            ...controller.shopDetails.value.modesOfService.map((mode) => ListTile(
-              leading: Icon(
-                mode == ModeOfService.home 
-                  ? Icons.home 
-                  : Icons.location_on
-              ),
-              title: Text(
-                mode == ModeOfService.home 
-                  ? 'Home Service' 
-                  : 'On-site Service'
-              ),
-            )),
+            ...controller.shopDetails.value.modesOfService
+                .map((mode) => ListTile(
+                      leading: Icon(mode == ModeOfService.home
+                          ? Icons.home
+                          : Icons.location_on),
+                      title: Text(mode == ModeOfService.home
+                          ? 'Home Service'
+                          : 'On-site Service'),
+                    )),
           if (isEditMode)
             ...ModeOfService.values.map((mode) => CheckboxListTile(
-              title: Text(mode == ModeOfService.home ? 'Home Service' : 'On-site'),
-              value: controller.selectedServiceModes.contains(mode),
-              onChanged: (_) => controller.updateServiceModes(mode),
-            )),
+                  title: Text(
+                      mode == ModeOfService.home ? 'Home Service' : 'On-site'),
+                  value: controller.selectedServiceModes.contains(mode),
+                  onChanged: (_) => controller.updateServiceModes(mode),
+                )),
         ],
       );
     });
@@ -269,10 +262,8 @@ Widget _buildDetailCard(BuildContext context, {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Operating Hours', 
-            style: TextStyle(fontWeight: FontWeight.bold)
-          ),
+          const Text('Operating Hours',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           if (!isEditMode)
             ...controller.weekdays.map((day) {
               final dayHours = operatingHours[day] ?? {};
@@ -283,13 +274,14 @@ Widget _buildDetailCard(BuildContext context, {
                 title: Text(day),
                 trailing: Text(
                   startTime != null && endTime != null
-                    ? '${_formatTime(startTime)} - ${_formatTime(endTime)}'
-                    : 'Not Set',
+                      ? '${_formatTime(startTime)} - ${_formatTime(endTime)}'
+                      : 'Not Set',
                 ),
               );
             }),
           if (isEditMode)
-            ...controller.weekdays.map((day) => _buildOperatingHoursRow(controller, day)),
+            ...controller.weekdays
+                .map((day) => _buildOperatingHoursRow(controller, day)),
         ],
       );
     });
@@ -311,20 +303,20 @@ Widget _buildDetailCard(BuildContext context, {
               child: GestureDetector(
                 onTap: () => controller.pickOperatingHours(day),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     startTime != null && endTime != null
-                      ? '${_formatTime(startTime)} - ${_formatTime(endTime)}'
-                      : 'Select Hours',
+                        ? '${_formatTime(startTime)} - ${_formatTime(endTime)}'
+                        : 'Select Hours',
                     style: TextStyle(
-                      color: startTime != null && endTime != null 
-                        ? Colors.black 
-                        : Colors.grey
-                    ),
+                        color: startTime != null && endTime != null
+                            ? Colors.black
+                            : Colors.grey),
                   ),
                 ),
               ),
@@ -348,116 +340,113 @@ Widget _buildDetailCard(BuildContext context, {
     return '$hour:$minute $period';
   }
 
-Widget _buildLocationSection(ShopDetailsController controller) {
-  return Obx(() {
-    final isEditMode = controller.isEditMode.value;
-    final selectedAddress = controller.selectedLocationAddress.value;
+  Widget _buildLocationSection(ShopDetailsController controller) {
+    return Obx(() {
+      final isEditMode = controller.isEditMode.value;
+      final selectedAddress = controller.selectedLocationAddress.value;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Location', 
-          style: TextStyle(fontWeight: FontWeight.bold)
-        ),
-        
-        // Location Search and Map in Edit Mode
-        if (isEditMode) Column(
-          children: [
-            // Search bar for location
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: controller.searchLocationController,
-                      decoration: InputDecoration(
-                        hintText: 'Search for a location',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            controller.searchLocationController.clear();
-                          },
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onSubmitted: (value) => controller.searchLocation(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: controller.searchLocation,
-                    child: const Text('Search'),
-                  ),
-                ],
-              ),
-            ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('Location', style: TextStyle(fontWeight: FontWeight.bold)),
 
-            // Google Map
-            SizedBox(
-              height: 250,
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: controller.selectedLocation.value ?? 
-                          const LatLng(0, 0),
-                  zoom: 15,
-                ),
-                markers: controller.mapMarkers,
-                onMapCreated: controller.onMapCreated,
-                onTap: controller.onMapTapped,
-              ),
-            ),
-
-            // Location Actions
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Text(
-                    selectedAddress.isNotEmpty 
-                      ? selectedAddress 
-                      : 'No location selected',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
+          // Location Search and Map in Edit Mode
+          if (isEditMode)
+            Column(
+              children: [
+                // Search bar for location
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
                     children: [
-                      ElevatedButton(
-                        onPressed: controller.getCurrentLocation,
-                        child: const Text('Use My Location'),
-                      ),
-                      if (controller.locationSuggestions.isNotEmpty)
-                        ElevatedButton(
-                          onPressed: controller.showLocationSuggestions,
-                          child: const Text('Location Suggestions'),
+                      Expanded(
+                        child: TextField(
+                          controller: controller.searchLocationController,
+                          decoration: InputDecoration(
+                            hintText: 'Search for a location',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                controller.searchLocationController.clear();
+                              },
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onSubmitted: (value) => controller.searchLocation(),
                         ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: controller.searchLocation,
+                        child: const Text('Search'),
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+
+                // Google Map
+                SizedBox(
+                  height: 250,
+                  child: GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: controller.selectedLocation.value ??
+                          const LatLng(0, 0),
+                      zoom: 15,
+                    ),
+                    markers: controller.mapMarkers,
+                    onMapCreated: controller.onMapCreated,
+                    onTap: controller.onMapTapped,
+                  ),
+                ),
+
+                // Location Actions
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        selectedAddress.isNotEmpty
+                            ? selectedAddress
+                            : 'No location selected',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ElevatedButton(
+                            onPressed: controller.getCurrentLocation,
+                            child: const Text('Use My Location'),
+                          ),
+                          if (controller.locationSuggestions.isNotEmpty)
+                            ElevatedButton(
+                              onPressed: controller.showLocationSuggestions,
+                              child: const Text('Location Suggestions'),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          else
+            // Non-edit mode display
+            Text(
+              selectedAddress.isNotEmpty ? selectedAddress : 'Location not set',
+              style: const TextStyle(color: Colors.grey),
             ),
-          ],
-        )
-        else 
-          // Non-edit mode display
-          Text(
-            selectedAddress.isNotEmpty 
-              ? selectedAddress 
-              : 'Location not set',
-            style: const TextStyle(color: Colors.grey),
-          ),
-      ],
-    );
-  });
-}
+        ],
+      );
+    });
+  }
+
   Widget _buildSaveButton(ShopDetailsController controller) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
@@ -468,7 +457,7 @@ Widget _buildLocationSection(ShopDetailsController controller) {
       ),
       onPressed: controller.saveShopDetails,
       child: const Text(
-        'Save Changes', 
+        'Save Changes',
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,

@@ -32,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen>
       } else {
         // Check authentication and redirect
         final auth = AuthenticationRepository.instance;
-        auth.redirect();
+        // auth.redirect();
       }
     }
   }

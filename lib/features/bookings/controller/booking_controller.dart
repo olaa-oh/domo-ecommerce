@@ -1,6 +1,8 @@
 //  booking controller
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:domo/data/repos/booking_repository.dart';
 import 'package:domo/features/bookings/models/booking_model.dart';
+import 'package:domo/features/services/models/service_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -10,9 +12,10 @@ class BookingsController extends GetxController {
 
   // Reactive variables
   Rxn<Stream<List<BookingModel>>> _userBookings = Rxn();
-RxList<BookingModel> userBookings = <BookingModel>[].obs;
+  RxList<BookingModel> userBookings = <BookingModel>[].obs;
   RxBool _isLoading = false.obs;
   bool get isLoading => _isLoading.value;
+
 
   RxnString _errorMessage = RxnString();
   String? get errorMessage => _errorMessage.value;
@@ -20,10 +23,11 @@ RxList<BookingModel> userBookings = <BookingModel>[].obs;
   // Book a service
   Future<bool> bookService({
     required String serviceId, 
-    String? shopId,
+    required String shopId,
     required DateTime bookingDate,
     String notes = '',
     required double price,
+    required String serviceName,
   }) async {
     try {
       _isLoading.value = true;
@@ -36,6 +40,7 @@ RxList<BookingModel> userBookings = <BookingModel>[].obs;
         bookingDate: bookingDate,
         notes: notes,
         price: price,
+        serviceName: serviceName,
       );
 
       // Show success snackbar
@@ -103,7 +108,58 @@ void fetchUserBookings() {
     }
   }
 
+  
+// void fetchUserBookings() {
+//   try {
+//     _isLoading.value = true;
+//     _errorMessage.value = null;
+//     update();
 
+//     // Subscribe to the stream and update userBookings
+//     _repository.fetchUserBookings().listen((bookingsList) {
+//       print('Fetched bookings count: ${bookingsList.length}');
+//       // Debug: Print status of all bookings
+//       for (var booking in bookingsList) {
+//         print('Booking ${booking.id}: Status = ${booking.status}');
+//       }
+      
+//       userBookings.value = bookingsList;
+//       _isLoading.value = false;
+//       update();
+//     }, onError: (error) {
+//       print('Booking fetch error: $error');
+//       _isLoading.value = false;
+//       _errorMessage.value = 'Failed to fetch bookings: $error';
+//       update();
+//     });
+//   } catch (e) {
+//     print('Booking fetch exception: $e');
+//     _isLoading.value = false;
+//     _errorMessage.value = 'Failed to fetch bookings: $e';
+//     update();
+//   }
+// }
+
+
+// Get a specific booking by ID
+Future<BookingModel?> getBookingById(String bookingId) async {
+  try {
+    _isLoading.value = true;
+    _errorMessage.value = null;
+    update();
+
+    final booking = await _repository.getBookingById(bookingId);
+    
+    _isLoading.value = false;
+    update();
+    return booking;
+  } catch (e) {
+    _isLoading.value = false;
+    _errorMessage.value = 'Failed to fetch booking details: $e';
+    update();
+    return null;
+  }
+}
 
   // Update booking date
   Future<bool> updateBookingDate({
@@ -294,56 +350,58 @@ void fetchUserBookings() {
     }
   }
 
-  Future<bool> initiateBookingCompletion({
-    required String bookingId,
-    required int rating,
-    required String review,
-  }) async {
-    try {
-      _isLoading.value = true;
-      _errorMessage.value = null;
-      update();
+// initiate booking completion
+Future<bool> initiateBookingCompletion({
+  required String bookingId,
+  int rating = 0,  
+  String review = '',  
+}) async {
+  try {
+    _isLoading.value = true;
+    _errorMessage.value = null;
+    update();
 
-      final success = await _repository.initiateBookingCompletion(
-        bookingId: bookingId,
-        rating: rating,
-        review: review,
-      );
+    final success = await _repository.initiateBookingCompletion(
+      bookingId: bookingId,
+      rating: rating,
+      review: review,
+    );
 
-      if (success) {
-        // Show success snackbar
-        Get.snackbar(
-          'Completion Initiated', 
-          'Booking completion request sent',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
-
-        // Refresh user bookings
-        fetchUserBookings();
-      }
-
-      _isLoading.value = false;
-      update();
-      return success;
-    } catch (e) {
-      _isLoading.value = false;
-      _errorMessage.value = e.toString();
-      
-      // Show error snackbar
+    if (success) {
+      // Show success snackbar
       Get.snackbar(
-        'Completion Failed', 
-        _errorMessage.value ?? 'Unable to initiate booking completion',
+        'Completion Initiated', 
+        'Booking completion request sent',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.green,
         colorText: Colors.white,
       );
 
-      update();
-      return false;
+      // Refresh user bookings
+      fetchUserBookings();
     }
+
+    _isLoading.value = false;
+    update();
+    return success;
+  } catch (e) {
+    _isLoading.value = false;
+    _errorMessage.value = e.toString();
+    
+    // Show error snackbar
+    Get.snackbar(
+      'Completion Failed', 
+      _errorMessage.value ?? 'Unable to initiate booking completion',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+    );
+
+    update();
+    return false;
   }
+}
+
 
   // Confirm booking completion
   Future<bool> confirmBookingCompletion(String bookingId) async {
@@ -388,6 +446,39 @@ void fetchUserBookings() {
       return false;
     }
   }
+
+  // Check if a booking is eligible for review
+Future<bool> isBookingEligibleForReview(String bookingId) async {
+  try {
+    return await _repository.isBookingEligibleForReview(bookingId);
+  } catch (e) {
+    _errorMessage.value = 'Error checking review eligibility: $e';
+    return false;
+  }
+}
+
+// Get all completed bookings eligible for review
+Future<List<BookingModel>> getCompletedBookingsForReview() async {
+  try {
+    _isLoading.value = true;
+    update();
+    
+    final allBookings = userBookings.where((booking) => 
+      booking.status == 'completed' && 
+      (booking.reviewId == null || booking.reviewId!.isEmpty)
+    ).toList();
+    
+    _isLoading.value = false;
+    update();
+    
+    return allBookings;
+  } catch (e) {
+    _isLoading.value = false;
+    _errorMessage.value = 'Error getting completed bookings: $e';
+    update();
+    return [];
+  }
+}
 
 
 

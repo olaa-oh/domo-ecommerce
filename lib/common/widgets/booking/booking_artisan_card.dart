@@ -8,12 +8,10 @@ import 'package:domo/features/bookings/models/booking_model.dart';
 
 class BookingCard extends StatefulWidget {
   final BookingModel booking;
-  final String serviceName;
 
   const BookingCard({
     Key? key, 
     required this.booking, 
-    required this.serviceName
   }) : super(key: key);
 
   @override
@@ -33,7 +31,7 @@ class _BookingCardState extends State<BookingCard> {
   }
 
   Future<void> _fetchCustomerName() async {
-    final name = await _userRepository.getCachedUserName(widget.booking.customerId);
+    final name = await _userRepository.getUserName(widget.booking.customerId);
     if (mounted) {
       setState(() {
         _customerName = name;
@@ -91,7 +89,7 @@ class _BookingCardState extends State<BookingCard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  widget.serviceName,
+                  widget.booking.serviceName,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),

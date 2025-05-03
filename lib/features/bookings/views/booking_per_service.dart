@@ -64,7 +64,6 @@ class _BookingPerService extends State<BookingPerService> {
                 final booking = snapshot.data![index];
                 return BookingCard(
                   booking: booking,
-                  serviceName: widget.serviceName,
                 );
               },
             );

@@ -180,4 +180,30 @@ class ShopModel {
       operatingHours: operatingHours ?? emptyModel.operatingHours,
     );
   }
+
+  factory ShopModel.fromJson(Map<String, dynamic> json) {
+  return ShopModel(
+    id: json['id'] ?? '',
+    artisanId: json['artisanId'] ?? '',
+    name: json['name'] ?? '',
+    description: json['description'] ?? '',
+    phoneNumber: json['phoneNumber'] ?? '',
+    image: json['image'] ?? '',
+    rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+    location: json['location'] ?? GeoPoint(0, 0),
+    modesOfService: (json['modesOfService'] as List?)
+        ?.map((mode) => ModeOfService.values.firstWhere(
+              (e) => e.toString() == mode,
+              orElse: () => ModeOfService.home,
+            ))
+        .toList() ?? [],
+    operatingHours: json['operatingHours'] != null
+        ? _parseOperatingHours(json['operatingHours'])
+        : {},
+  );
+}
+
+
+
+
 }
